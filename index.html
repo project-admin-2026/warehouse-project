@@ -76,7 +76,7 @@ body {
   padding: 0 24px;
   position: sticky;
   top: 52px;
-  z-index: 99;
+  z-index: 102;
 }
 .tab {
   padding: 12px 20px;
@@ -96,7 +96,7 @@ body {
 }
 
 /* Main */
-.main { padding: 20px 24px; margin: 0 auto; width: 100%; flex: 1; min-height: calc(100vh - 110px); }
+.main { padding: 20px 24px; margin: 0 auto; width: 100%; flex: 1; min-height: calc(100vh - 110px); position: relative; z-index: 1; }
 
 /* Cards */
 .card {
@@ -112,6 +112,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+;
+  z-index: 1;
 }
 .card-header h2 { font-size: 17px; color: var(--primary-text); font-weight: 500; }
 .card-body { padding: 14px 18px; }
@@ -248,6 +250,8 @@ body {
   padding: 10px 14px;
   font-weight: 500;
   font-size: 17px;
+;
+  z-index: 1;
 }
 .checklist-item-row {
   display: flex;
@@ -452,7 +456,7 @@ body {
 
 /* Section visibility */
 .section { display: none; }
-.section.active { display: block; min-height: calc(100vh - 110px); }
+.section.active { display: block; min-height: calc(100vh - 110px); position: relative; z-index: 1; }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -574,7 +578,7 @@ body {
 .data-table thead th {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 98;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   background: var(--primary) !important;
 }
@@ -585,20 +589,15 @@ body {
   overflow-y: auto;
 }
 
-/* 列宽调整手柄 */
+/* 列宽调整手柄 - 使用子元素避免影响 sticky */
 .data-table th {
-  position: relative;
-  resize: horizontal;
-  overflow: auto;
   min-width: 40px;
 }
-.data-table th::-webkit-resizer {
-  background: linear-gradient(135deg, transparent 50%, var(--primary-dark) 50%);
-  border-radius: 2px;
+/* 普通 th 不需要 position: relative，只有带 resize-handle 的才需要 */
+.data-table th.has-resize {
+  position: relative;
 }
-
-/* 列宽调整指示器 */
-.col-resize-handle {
+.data-table th .th-resize-handle {
   position: absolute;
   right: 0;
   top: 0;
@@ -606,27 +605,15 @@ body {
   width: 4px;
   cursor: col-resize;
   background: transparent;
-  transition: background 0.2s;
+  z-index: 10;
 }
-.col-resize-handle:hover {
+.data-table th .th-resize-handle:hover {
   background: var(--primary-dark);
 }
 
-/* 表格滚动容器 */
-.table-scroll-container {
-  max-height: calc(100vh - 250px);
-  overflow-y: auto;
-  overflow-x: auto;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
 
-/* 确保表头始终在最上层 */
-.data-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+
+
 
 /* Checklist编辑样式 */
 .btn-edit-group {
@@ -692,55 +679,56 @@ body {
 </head>
 <body>
 <!-- ==================== 登录/注册覆盖层 ==================== -->
-<div id="authOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);z-index:10000;display:flex;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;width:100%;max-width:450px;margin:20px;">
-    <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:30px;text-align:center;">
-      <h1 style="font-size:28px;margin-bottom:10px;">📋 项目管理系统</h1>
-      <p>新仓筹建全流程管理</p>
+<div id="authOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f7fa;z-index:10000;display:flex;justify-content:center;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.08);width:100%;max-width:400px;margin:20px;border:1px solid #e8e8e8;">
+    <div style="padding:40px 32px 20px;text-align:center;">
+      <div style="font-size:32px;margin-bottom:12px;">📋</div>
+      <h1 style="font-size:22px;font-weight:600;color:#333;margin:0;">项目管理系统</h1>
+      <p style="font-size:14px;color:#999;margin-top:6px;">新仓筹建全流程管理</p>
     </div>
-    <div style="display:flex;border-bottom:1px solid #e0e0e0;">
-      <button id="loginTabBtn" onclick="switchAuthTab('login')" style="flex:1;text-align:center;padding:15px;cursor:pointer;background:white;color:#667eea;border:none;border-bottom:2px solid #667eea;font-size:16px;">登录</button>
-      <button id="registerTabBtn" onclick="switchAuthTab('register')" style="flex:1;text-align:center;padding:15px;cursor:pointer;background:#f5f5f5;color:#333;border:none;border-bottom:2px solid transparent;font-size:16px;">注册</button>
+    <div style="display:flex;border-bottom:1px solid #f0f0f0;margin:0 32px;">
+      <button id="loginTabBtn" onclick="switchAuthTab('login')" style="flex:1;text-align:center;padding:12px;cursor:pointer;background:transparent;color:#333;border:none;border-bottom:2px solid #333;font-size:14px;font-weight:500;">登录</button>
+      <button id="registerTabBtn" onclick="switchAuthTab('register')" style="flex:1;text-align:center;padding:12px;cursor:pointer;background:transparent;color:#999;border:none;border-bottom:2px solid transparent;font-size:14px;">注册</button>
     </div>
-    <div id="authFormContainer" style="padding:30px;">
+    <div id="authFormContainer" style="padding:24px 32px 32px;">
       <!-- 登录表单 -->
       <div id="loginForm">
-        <div id="loginError" style="display:none;background:#fee;color:#c33;padding:10px;border-radius:8px;margin-bottom:15px;font-size:14px;"></div>
-        <div style="margin-bottom:20px;">
-          <label style="display:block;margin-bottom:8px;font-weight:500;color:#333;">邮箱</label>
-          <input type="email" id="loginEmail" placeholder="请输入邮箱" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+        <div id="loginError" style="display:none;background:#fff2f0;color:#cf1322;padding:10px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;border:1px solid #ffccc7;"></div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:6px;font-size:13px;color:#666;font-weight:500;">邮箱</label>
+          <input type="email" id="loginEmail" placeholder="请输入邮箱" style="width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:4px;font-size:14px;outline:none;transition:border-color 0.2s;box-sizing:border-box;" onfocus="this.style.borderColor='#40a9ff'" onblur="this.style.borderColor='#d9d9d9'">
         </div>
         <div style="margin-bottom:20px;">
-          <label style="display:block;margin-bottom:8px;font-weight:500;color:#333;">密码</label>
-          <input type="password" id="loginPassword" placeholder="请输入密码" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+          <label style="display:block;margin-bottom:6px;font-size:13px;color:#666;font-weight:500;">密码</label>
+          <input type="password" id="loginPassword" placeholder="请输入密码" style="width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:4px;font-size:14px;outline:none;transition:border-color 0.2s;box-sizing:border-box;" onfocus="this.style.borderColor='#40a9ff'" onblur="this.style.borderColor='#d9d9d9'">
         </div>
-        <button onclick="handleLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;">登录</button>
+        <button onclick="handleLogin()" style="width:100%;padding:10px;background:#1a1a1a;color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;font-weight:500;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">登录</button>
       </div>
       <!-- 注册表单 -->
       <div id="registerForm" style="display:none;">
-        <div id="registerError" style="display:none;background:#fee;color:#c33;padding:10px;border-radius:8px;margin-bottom:15px;font-size:14px;"></div>
-        <div id="registerSuccess" style="display:none;background:#efe;color:#3c3;padding:10px;border-radius:8px;margin-bottom:15px;font-size:14px;"></div>
-        <div style="margin-bottom:20px;">
-          <label style="display:block;margin-bottom:8px;font-weight:500;color:#333;">邮箱</label>
-          <input type="email" id="registerEmail" placeholder="请输入邮箱" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+        <div id="registerError" style="display:none;background:#fff2f0;color:#cf1322;padding:10px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;border:1px solid #ffccc7;"></div>
+        <div id="registerSuccess" style="display:none;background:#f6ffed;color:#389e0d;padding:10px 12px;border-radius:4px;margin-bottom:16px;font-size:13px;border:1px solid #b7eb8f;"></div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:6px;font-size:13px;color:#666;font-weight:500;">邮箱</label>
+          <input type="email" id="registerEmail" placeholder="请输入邮箱" style="width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:4px;font-size:14px;outline:none;transition:border-color 0.2s;box-sizing:border-box;" onfocus="this.style.borderColor='#40a9ff'" onblur="this.style.borderColor='#d9d9d9'">
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:6px;font-size:13px;color:#666;font-weight:500;">密码</label>
+          <input type="password" id="registerPassword" placeholder="请输入密码（至少6位）" style="width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:4px;font-size:14px;outline:none;transition:border-color 0.2s;box-sizing:border-box;" onfocus="this.style.borderColor='#40a9ff'" onblur="this.style.borderColor='#d9d9d9'">
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:6px;font-size:13px;color:#666;font-weight:500;">确认密码</label>
+          <input type="password" id="registerConfirmPassword" placeholder="请再次输入密码" style="width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:4px;font-size:14px;outline:none;transition:border-color 0.2s;box-sizing:border-box;" onfocus="this.style.borderColor='#40a9ff'" onblur="this.style.borderColor='#d9d9d9'">
         </div>
         <div style="margin-bottom:20px;">
-          <label style="display:block;margin-bottom:8px;font-weight:500;color:#333;">密码</label>
-          <input type="password" id="registerPassword" placeholder="请输入密码（至少6位）" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-        </div>
-        <div style="margin-bottom:20px;">
-          <label style="display:block;margin-bottom:8px;font-weight:500;color:#333;">确认密码</label>
-          <input type="password" id="registerConfirmPassword" placeholder="请再次输入密码" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-        </div>
-        <div style="margin-bottom:20px;">
-          <label style="display:block;margin-bottom:8px;font-weight:500;color:#333;">角色</label>
-          <select id="registerRole" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+          <label style="display:block;margin-bottom:6px;font-size:13px;color:#666;font-weight:500;">角色</label>
+          <select id="registerRole" style="width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:4px;font-size:14px;outline:none;background:#fff;box-sizing:border-box;">
             <option value="member">普通成员</option>
             <option value="leader">领导</option>
             <option value="admin">管理员</option>
           </select>
         </div>
-        <button onclick="handleRegister()" style="width:100%;padding:12px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;">注册</button>
+        <button onclick="handleRegister()" style="width:100%;padding:10px;background:#1a1a1a;color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;font-weight:500;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">注册</button>
       </div>
     </div>
   </div>
@@ -818,7 +806,7 @@ body {
 <!-- GANTT -->
 <div id="gantt" class="section">
   <div class="card">
-    <div class="card-header"><h2>新仓筹建任务甘特图</h2><div><button class="btn btn-sm" onclick="toggleGanttEdit()" id="ganttEditBtn">进入编辑</button>
+    <div class="card-header"><h2>新仓筹建任务甘特图</h2><div><button class="btn btn-sm" onclick="toggleGanttEdit()" id="ganttEditBtn2">进入编辑</button>
     <button class="btn btn-sm" onclick="showSopExportModal()">导出SOP</button>
     <button class="btn btn-sm" onclick="showSopImportModal()">导入SOP</button>
     <button class="btn btn-primary btn-sm" onclick="showAddTaskModal()">新增任务</button></div></div>
@@ -846,7 +834,7 @@ body {
 <!-- CHECKLIST -->
 <div id="checklist" class="section">
   <div class="card">
-    <div class="card-header"><h2>开仓前Checklist（50项）</h2></div>
+    <div class="card-header"><h2>开仓前Checklist（50项）</h2><button class="btn btn-primary btn-sm" onclick="addChecklistGroup()">+ 添加分组</button></div>
     <div class="card-body"><div class="checklist-grid" id="checklistContainer"></div></div>
   </div>
 </div>
@@ -1212,8 +1200,9 @@ function initColumnResize() {
 
   headers.forEach(function(th, index) {
     // 创建调整手柄
+    th.classList.add('has-resize');
     var handle = document.createElement('div');
-    handle.className = 'col-resize-handle';
+    handle.className = 'th-resize-handle';
     handle.style.position = 'absolute';
     handle.style.right = '0';
     handle.style.top = '0';
@@ -1380,46 +1369,40 @@ function renderGantt() {
     var progressDisplay = ganttEditing ? '<input type="number" data-idx="' + idx + '" data-field="progress" value="' + t.progress + '" min="0" max="100" style="width:50px;">%' : '<div class="progress-bar" style="width:70px;display:inline-block;vertical-align:middle;"><div class="progress-fill ' + (t.progress>=70?'high':t.progress>=30?'mid':'low') + '" style="width:' + t.progress + '%"></div></div><span style="font-size:15px;margin-left:5px;">' + t.progress + '%</span>';
     var noteDisplay = ganttEditing ? '<textarea data-idx="' + idx + '" data-field="note" style="width:100%;min-height:30px;">' + (t.note || '') + '</textarea>' : '<span style="font-size:15px;color:var(--text-light);">' + (t.note || '-') + '</span>';
     var deleteBtn = ganttEditing ? '<td><button class="btn btn-danger btn-sm" data-delete="' + idx + '">删</button></td>' : '';
-    var checkboxCol = ganttEditing ? '<td><input type="checkbox" data-check="' + idx + '"' + (t.status==='done'?' checked':'') + '></td>' : '';
-    var checkboxCell = ganttEditing ? checkboxCol : '<td style="width:28px"></td>';
+    var checkboxCell = ganttEditing ? '<td><input type="checkbox" data-check="' + idx + '"' + (t.status==='done'?' checked':'') + '></td>' : '<td style="width:28px"></td>';
     var actionCell = ganttEditing ? deleteBtn : '<td style="width:40px"></td>';
     tbody.innerHTML += '<tr>' + checkboxCell + '<td style="width:70px"><span class="phase-tag phase-' + getPhaseClass(t.phase) + '">' + t.phase + '</span></td><td style="min-width:180px">' + nameDisplay + '</td><td style="width:110px">' + (ganttEditing ? '<input type="date" data-idx="' + idx + '" data-field="startDate" value="' + t.startDate + '" style="width:110px;">' : t.startDate) + '</td><td style="width:110px">' + (ganttEditing ? '<input type="date" data-idx="' + idx + '" data-field="endDate" value="' + t.endDate + '" style="width:110px;">' : t.endDate) + '</td><td style="width:65px">' + t.duration + '天</td><td style="width:90px">' + ownerDisplay + '</td><td style="width:95px">' + statusOpts + '</td><td style="width:70px">' + progressDisplay + '</td><td style="min-width:160px">' + noteDisplay + '</td>' + actionCell + '</tr>';
   });
 
-  // 事件委托
-  if (ganttEditing) {
-    tbody.addEventListener('change', handleGanttChange);
-    tbody.addEventListener('click', handleGanttClick);
-  } else {
-    tbody.removeEventListener('change', handleGanttChange);
-    tbody.removeEventListener('click', handleGanttClick);
+  // 事件委托 - 一次性绑定，通过 ganttEditing 标志判断
+  if (!tbody._ganttEventsBound) {
+    tbody.addEventListener('change', function(e) {
+      if (!ganttEditing) return;
+      var target = e.target;
+      var idx = target.getAttribute('data-idx');
+      var field = target.getAttribute('data-field');
+      if (idx !== null && field !== null) {
+        updateTaskField(parseInt(idx), field, target.value);
+        if (field === 'startDate' || field === 'endDate') {
+          calcDuration(parseInt(idx));
+        }
+      }
+      var checkIdx = target.getAttribute('data-check');
+      if (checkIdx !== null && target.type === 'checkbox') {
+        toggleTaskDone(parseInt(checkIdx), target.checked);
+      }
+    });
+    tbody.addEventListener('click', function(e) {
+      if (!ganttEditing) return;
+      var target = e.target;
+      var deleteIdx = target.getAttribute('data-delete');
+      if (deleteIdx !== null) {
+        deleteTask(parseInt(deleteIdx));
+      }
+    });
+    tbody._ganttEventsBound = true;
   }
 }
-
-function handleGanttChange(e) {
-  var target = e.target;
-  var idx = target.getAttribute('data-idx');
-  var field = target.getAttribute('data-field');
-  if (idx !== null && field !== null) {
-    updateTaskField(parseInt(idx), field, target.value);
-    if (field === 'startDate' || field === 'endDate') {
-      calcDuration(parseInt(idx));
-    }
-  }
-}
-
-function handleGanttClick(e) {
-  var target = e.target;
-  var deleteIdx = target.getAttribute('data-delete');
-  if (deleteIdx !== null) {
-    deleteTask(parseInt(deleteIdx));
-  }
-  var checkIdx = target.getAttribute('data-check');
-  if (checkIdx !== null && target.type === 'checkbox') {
-    toggleTaskDone(parseInt(checkIdx), target.checked);
-  }
-}
-
 
 function updateTaskStatus(idx, val) {
   tasks[idx].status = val;
@@ -1440,8 +1423,8 @@ function updateTaskField(idx, field, val) {
   if (field === 'progress') val = parseInt(val) || 0;
   tasks[idx][field] = val;
   if (field === 'startDate' || field === 'endDate') {
-    var d1 = new Date(tasks[idx].startDate);
-    var d2 = new Date(tasks[idx].endDate);
+    var d1 = new Date(tasks[idx].startDate + 'T00:00:00');
+    var d2 = new Date(tasks[idx].endDate + 'T00:00:00');
     var days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
     tasks[idx].duration = days > 0 ? days : 1;
   }
@@ -1473,35 +1456,7 @@ function deleteTask(idx) {
 
 
 function initGanttEvents() {
-  var tbody = document.getElementById('taskTableBody');
-  if (!tbody || tbody._ganttEventsBound) return;
-  tbody._ganttEventsBound = true;
-
-  tbody.addEventListener('change', function(e) {
-    var target = e.target;
-    var idx = target.getAttribute('data-idx');
-    var field = target.getAttribute('data-field');
-    if (idx !== null && field !== null) {
-      updateTaskField(parseInt(idx), field, target.value);
-      if (field === 'startDate' || field === 'endDate') {
-        calcDuration(parseInt(idx));
-      }
-    }
-    var checkIdx = target.getAttribute('data-check');
-    if (checkIdx !== null && target.type === 'checkbox') {
-      toggleTaskDone(parseInt(checkIdx), target.checked);
-    }
-  });
-
-  tbody.addEventListener('click', function(e) {
-    var target = e.target;
-    var deleteIdx = target.getAttribute('data-delete');
-    if (deleteIdx !== null) {
-      deleteTask(parseInt(deleteIdx));
-    }
-  });
-
-  // 初始化列宽调整
+  // 列宽调整初始化（事件绑定已在 renderGantt 中完成）
   initColumnResize();
 }
 
@@ -1521,8 +1476,8 @@ function addNewTask() {
 
   var startDate = start;
   var endDate = end;
-  var d1 = new Date(startDate);
-  var d2 = new Date(endDate);
+  var d1 = new Date(startDate + 'T00:00:00');
+  var d2 = new Date(endDate + 'T00:00:00');
   var days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
 
   tasks.push({
@@ -1572,8 +1527,8 @@ function renderChecklist() {
       var safeText = escapeHtml(itemText);
 
       if (isEditing) {
-        // 编辑模式：显示输入框
-        itemsHtml += '<div class="checklist-item-row ' + doneClass + '"><input type="checkbox" ' + checked + ' data-group="' + safeGroup + '" data-idx="' + idx + '"><input type="text" class="checklist-edit-input" data-group="' + safeGroup + '" data-idx="' + idx + '" value="' + safeText + '" placeholder="输入检查项内容..."></div>';
+        // 编辑模式：显示输入框+删除按钮
+        itemsHtml += '<div class="checklist-item-row ' + doneClass + '"><input type="checkbox" ' + checked + ' data-group="' + safeGroup + '" data-idx="' + idx + '"><input type="text" class="checklist-edit-input" data-group="' + safeGroup + '" data-idx="' + idx + '" value="' + safeText + '" placeholder="输入检查项内容..."><button data-group="' + safeGroup + '" data-idx="' + idx + '" onclick="deleteChecklistItem(this.dataset.group, parseInt(this.dataset.idx))" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:14px;padding:0 4px;" title="删除">×</button></div>';
       } else {
         // 普通模式：显示文字
         itemsHtml += '<div class="checklist-item-row ' + doneClass + '"><input type="checkbox" ' + checked + ' data-group="' + safeGroup + '" data-idx="' + idx + '"><label data-group="' + safeGroup + '" data-idx="' + idx + '">' + safeText + '</label></div>';
@@ -1581,8 +1536,8 @@ function renderChecklist() {
     });
 
     var editBtn = isEditing 
-      ? '<button class="btn-edit-group" onclick="saveChecklistGroup(\'' + group.replace(/'/g, "\'") + '\')" title="保存">💾</button>'
-      : '<button class="btn-edit-group" onclick="editChecklistGroup(\'' + group.replace(/'/g, "\'") + '\')" title="编辑">✏️</button>';
+      ? '<button class="btn-edit-group" data-group="' + group + '" onclick="saveChecklistGroup(this.dataset.group)" title="保存">💾</button><button class="btn-edit-group" data-group="' + group + '" onclick="addChecklistItem(this.dataset.group)" title="添加项">➕</button>'
+      : '<button class="btn-edit-group" data-group="' + group + '" onclick="editChecklistGroup(this.dataset.group)" title="编辑">✏️</button>';
 
     container.innerHTML += '<div class="checklist-group" id="' + groupId + '"><div class="checklist-group-header">' + group + editBtn + '</div>' + itemsHtml + '<div class="checklist-progress"><span>完成 ' + checkedCount + '/' + total + ' 项</span><div class="progress-bar" style="width:80px;display:inline-block;vertical-align:middle;margin-left:6px;"><div class="progress-fill ' + (pct >= 80 ? 'high' : pct >= 40 ? 'mid' : 'low') + '" style="width:' + pct + '%"></div></div><span style="margin-left:5px;font-weight:500;">' + pct + '%</span></div></div>';
   }
@@ -1652,6 +1607,37 @@ function saveChecklistGroup(group) {
   showToast('保存成功');
 }
 
+// 添加新检查项到分组
+function addChecklistItem(group) {
+  if (!checklist[group]) return;
+  checklist[group].push({ text: '新检查项', checked: false });
+  saveData();
+  renderChecklist();
+  showToast('已添加新检查项');
+}
+
+// 删除检查项
+function deleteChecklistItem(group, idx) {
+  if (!checklist[group] || !checklist[group][idx]) return;
+  if (confirm('确定删除此检查项吗？')) {
+    checklist[group].splice(idx, 1);
+    saveData();
+    renderChecklist();
+    showToast('已删除');
+  }
+}
+
+// 添加新分组
+function addChecklistGroup() {
+  var name = prompt('请输入新分组名称：');
+  if (name && name.trim()) {
+    checklist[name.trim()] = [{ text: '新检查项', checked: false }];
+    saveData();
+    renderChecklist();
+    showToast('新分组已添加');
+  }
+}
+
 function toggleChecklist(group, idx) {
   console.log('toggleChecklist:', group, idx);
   if (!checklist[group] || !checklist[group][idx]) {
@@ -1677,18 +1663,24 @@ function renderLogs() {
     return;
   }
   list.innerHTML = sorted.map(function(l) {
-    return '<div class="log-entry"><div class="log-date">' + l.date + '</div><div class="log-content">' + escapeHtml(l.content) + '</div></div>';
+    var planHtml = l.plan ? '<div style="margin-top:6px;padding:6px;background:#e3f2fd;border-radius:3px;font-size:13px;"><strong style="color:#1565c0;">下周计划：</strong>' + escapeHtml(l.plan) + '</div>' : '';
+    var issuesHtml = l.issues ? '<div style="margin-top:6px;padding:6px;background:#fff3e0;border-radius:3px;font-size:13px;"><strong style="color:#e65100;">问题建议：</strong>' + escapeHtml(l.issues) + '</div>' : '';
+    return '<div class="log-entry"><div class="log-date">' + l.date + '</div><div class="log-content">' + escapeHtml(l.content) + '</div>' + planHtml + issuesHtml + '</div>';
   }).join('');
 }
 
 function addLog() {
   var date = document.getElementById('logDate').value;
   var content = document.getElementById('logContent').value.trim();
+  var plan = document.getElementById('logPlan').value.trim();
+  var issues = document.getElementById('logIssues').value.trim();
   if (!date) { showToast('请选择日期'); return; }
   if (!content) { showToast('请输入跟进内容'); return; }
-  logs.push({ id: Date.now(), date: date, content: content });
+  logs.push({ id: Date.now(), date: date, content: content, plan: plan, issues: issues });
   saveData();
   document.getElementById('logContent').value = '';
+  document.getElementById('logPlan').value = '';
+  document.getElementById('logIssues').value = '';
   renderLogs();
   showToast('跟进记录已保存');
 }
@@ -2272,10 +2264,16 @@ function renderSopContent() {
 function toggleGanttEdit() {
   ganttEditing = !ganttEditing;
   var btn = document.getElementById('ganttEditBtn');
+  var btn2 = document.getElementById('ganttEditBtn2');
   if (btn) {
     btn.textContent = ganttEditing ? '保存' : '进入编辑';
     btn.style.background = ganttEditing ? 'var(--success)' : '';
     btn.style.color = ganttEditing ? 'white' : '';
+  }
+  if (btn2) {
+    btn2.textContent = ganttEditing ? '保存' : '进入编辑';
+    btn2.style.background = ganttEditing ? 'var(--success)' : '';
+    btn2.style.color = ganttEditing ? 'white' : '';
   }
   renderGantt();
   showToast(ganttEditing ? '已进入编辑模式' : '已保存');
@@ -2426,12 +2424,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 4. 检查本地管理员并初始化
   var localAdmin = checkLocalAdmin();
-  if (localAdmin && window._isLocalMode) {
-    // 本地模式下模拟登录状态
+  if (localAdmin) {
     currentUser = { email: localAdmin, id: 'local_admin_' + Date.now() };
     currentUserRole = 'admin';
     currentUserId = currentUser.id;
     showUserInfo();
+    updateUIByRole();
   }
 
   updateUIByRole();
@@ -2466,6 +2464,14 @@ function initSupabase() {
   // 本地文件模式跳过Supabase初始化
   if (window._isLocalMode) {
     console.log('本地模式：跳过Supabase初始化');
+    var localAdmin = localStorage.getItem('warehouse_local_admin');
+    if (localAdmin) {
+      currentUser = { email: localAdmin, id: 'local_admin_' + Date.now() };
+      currentUserRole = 'admin';
+      currentUserId = currentUser.id;
+      showUserInfo();
+      updateUIByRole();
+    }
     hideAuthOverlay();
     return;
   }
@@ -2607,6 +2613,11 @@ async function handleLogout() {
   if (supabaseClient) {
     await supabaseClient.auth.signOut();
   }
+  var localAdmin = localStorage.getItem('warehouse_local_admin');
+  if (localAdmin && currentUser && currentUser.email === localAdmin) {
+    showToast('本地管理员保持登录');
+    return;
+  }
   currentUser = null; currentUserRole = null; currentUserId = null;
   showAuthOverlay();
   hideUserInfo();
@@ -2620,18 +2631,23 @@ function switchAuthTab(tab) {
   const loginForm = document.getElementById('loginForm');
   const registerForm = document.getElementById('registerForm');
   if (tab === 'login') {
-    loginBtn.style.background = 'white'; loginBtn.style.color = '#667eea'; loginBtn.style.borderBottom = '2px solid #667eea';
-    registerBtn.style.background = '#f5f5f5'; registerBtn.style.color = '#333'; registerBtn.style.borderBottom = '2px solid transparent';
+    loginBtn.style.color = '#333'; loginBtn.style.borderBottom = '2px solid #333'; loginBtn.style.fontWeight = '500';
+    registerBtn.style.color = '#999'; registerBtn.style.borderBottom = '2px solid transparent'; registerBtn.style.fontWeight = 'normal';
     loginForm.style.display = 'block'; registerForm.style.display = 'none';
   } else {
-    registerBtn.style.background = 'white'; registerBtn.style.color = '#667eea'; registerBtn.style.borderBottom = '2px solid #667eea';
-    loginBtn.style.background = '#f5f5f5'; loginBtn.style.color = '#333'; loginBtn.style.borderBottom = '2px solid transparent';
+    registerBtn.style.color = '#333'; registerBtn.style.borderBottom = '2px solid #333'; registerBtn.style.fontWeight = '500';
+    loginBtn.style.color = '#999'; loginBtn.style.borderBottom = '2px solid transparent'; loginBtn.style.fontWeight = 'normal';
     loginForm.style.display = 'none'; registerForm.style.display = 'block';
   }
 }
 
 // 显示/隐藏登录层
 function showAuthOverlay() {
+  // 如果有本地管理员设置，不显示登录层
+  var localAdmin = localStorage.getItem('warehouse_local_admin');
+  if (localAdmin && currentUser && currentUser.email === localAdmin) {
+    return;
+  }
   const overlay = document.getElementById('authOverlay');
   if (overlay) overlay.style.display = 'flex';
 }
@@ -2639,6 +2655,7 @@ function hideAuthOverlay() {
   const overlay = document.getElementById('authOverlay');
   if (overlay) overlay.style.display = 'none';
   updateAdminUI();
+  updateUIByRole();
 }
 
 // 显示用户信息
@@ -2688,38 +2705,32 @@ async function syncFromCloud() {
   try {
     showToast('正在同步云端数据...');
     // 同步任务
-    const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*').order('created_at', { ascending: false });
+    const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*').order('sort_order', { ascending: true });
     if (!taskError && taskData && taskData.length > 0) {
       tasks = taskData.map(t => ({
-        id: t.id, phase: t.phase || t.task_phase || '', name: t.name || t.task_name || '',
-        startDate: t.start_date || t.startDate || '', endDate: t.end_date || t.endDate || '',
-        duration: t.duration || 1, owner: t.owner || t.assignee || '',
+        id: t.id, phase: t.phase || '', name: t.name || '',
+        startDate: t.start_date || '', endDate: t.end_date || '',
+        duration: t.duration || 1, owner: t.owner || '',
         critical: t.critical || 0, status: t.status || 'pending', progress: t.progress || 0, note: t.note || ''
       }));
     }
     // 同步Checklist
     try {
-      const { data: checkData, error: checkError } = await supabaseClient.from('checklist').select('*').order('group_name', { ascending: true });
+      const { data: checkData, error: checkError } = await supabaseClient.from('checklist').select('*').order('sort_order', { ascending: true });
       console.log('云端Checklist原始数据:', checkData);
-      console.log('云端Checklist错误:', checkError);
       if (!checkError && checkData && checkData.length > 0) {
         checklist = {};
+        var hasValidData = false;
         checkData.forEach(item => {
-          // 调试：输出所有字段名
-          console.log('云端item字段:', Object.keys(item));
-          const group = item.group_name || item.group || '其他';
-          // 尝试所有可能的字段名
-          const text = item.content || item.item_name || item.item_text || item.text || item.name || item.title || item.description || '';
-          const checked = item.is_checked || item.checked || item.isChecked || false;
-          console.log('解析结果:', {group, text, checked});
+          const group = item.group_name || '其他';
+          const text = item.content || '';
+          const checked = item.is_checked === true || item.checked === true || false;
+          if (text) hasValidData = true;
           if (!checklist[group]) checklist[group] = [];
           checklist[group].push({ text: text, checked: checked });
         });
-        console.log('同步后checklist分组:', Object.keys(checklist));
-        // 检查是否有空text，如果有则使用默认数据
-        const firstGroup = Object.keys(checklist)[0];
-        if (firstGroup && checklist[firstGroup][0] && !checklist[firstGroup][0].text) {
-          console.log('云端数据text为空，回退到默认数据');
+        if (!hasValidData) {
+          console.log('云端数据无有效内容，回退到默认数据');
           checklist = JSON.parse(JSON.stringify(defaultChecklist));
         }
       } else {
@@ -2731,20 +2742,34 @@ async function syncFromCloud() {
       checklist = JSON.parse(JSON.stringify(defaultChecklist));
     }
     // 同步日志
-    const { data: logData, error: logError } = await supabaseClient.from('logs').select('*').order('created_at', { ascending: false });
-    if (!logError && logData && logData.length > 0) {
-      logs = logData.map(l => ({
-        id: l.id, date: l.date || l.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-        content: l.content || '', plan: l.plan || '', issues: l.issues || ''
-      }));
+    try {
+      const { data: logData, error: logError } = await supabaseClient.from('logs').select('*').order('created_at', { ascending: false });
+      if (!logError && logData && logData.length > 0) {
+        logs = logData.map(l => ({
+          id: l.id,
+          date: l.date || (l.created_at ? l.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+          content: l.content || '',
+          plan: l.plan || '',
+          issues: l.issues || ''
+        }));
+      }
+    } catch (err) {
+      console.log('日志同步失败:', err);
     }
     // 同步SOP
-    const { data: sopData, error: sopError } = await supabaseClient.from('sops').select('*').eq('user_id', currentUserId).single();
-    if (!sopError && sopData && sopData.data) {
-      try {
-        const parsed = JSON.parse(sopData.data);
-        if (parsed.sops) sops = parsed.sops;
-      } catch(e) {}
+    try {
+      const { data: sopData, error: sopError } = await supabaseClient.from('sops').select('*').eq('user_id', currentUserId).single();
+      if (!sopError && sopData && sopData.data) {
+        try {
+          const parsed = typeof sopData.data === 'string' ? JSON.parse(sopData.data) : sopData.data;
+          if (parsed.sops) {
+            sops = parsed.sops;
+            localStorage.setItem('warehouse_sop_data', JSON.stringify({ sops, savedAt: new Date().toISOString() }));
+          }
+        } catch(e) { console.log('SOP解析失败:', e); }
+      }
+    } catch (err) {
+      console.log('SOP同步失败（可能无数据）:', err);
     }
     // 保存到本地缓存
     localStorage.setItem('warehouse_project_data', JSON.stringify({ tasks, checklist, logs, savedAt: new Date().toISOString() }));
@@ -2771,42 +2796,64 @@ function scheduleCloudSync() {
 async function syncToCloud() {
   if (!supabaseClient || !currentUser) return;
   try {
-    // 保存任务
+    // 保存任务 - 字段名与前端state保持一致
     for (const task of tasks) {
       const dbTask = {
-        id: task.id, task_name: task.name, assignee: task.owner,
-        start_date: task.startDate, end_date: task.endDate,
-        duration: task.duration, status: task.status, progress: task.progress,
-        note: task.note, task_phase: task.phase, critical: task.critical,
+        id: task.id,
+        name: task.name,
+        owner: task.owner,
+        start_date: task.startDate,
+        end_date: task.endDate,
+        duration: task.duration,
+        status: task.status,
+        progress: task.progress,
+        note: task.note,
+        phase: task.phase,
+        critical: task.critical,
+        sort_order: task.id,
         user_id: currentUserId
       };
       await supabaseClient.from('tasks').upsert([dbTask], { onConflict: 'id' });
     }
-    // 保存Checklist
+    // 保存Checklist - 使用 sort_order 确保顺序
+    var sortOrder = 0;
     for (const group in checklist) {
       if (!checklist.hasOwnProperty(group)) continue;
-      checklist[group].forEach((item, idx) => {
-        supabaseClient.from('checklist').upsert([{
-          id: group + '_' + idx, group_name: group,
-          content: item.text, is_checked: item.checked,
+      for (let idx = 0; idx < checklist[group].length; idx++) {
+        const item = checklist[group][idx];
+        await supabaseClient.from('checklist').upsert([{
+          id: group + '_' + idx,
+          group_name: group,
+          content: item.text,
+          is_checked: item.checked,
+          sort_order: sortOrder++,
           user_id: currentUserId
         }], { onConflict: 'id' });
-      });
+      }
     }
     // 保存日志
     for (const log of logs) {
       await supabaseClient.from('logs').upsert([{
-        id: log.id, content: log.content, plan: log.plan || '', issues: log.issues || '',
-        date: log.date, created_by: currentUser?.email, user_id: currentUserId
+        id: log.id,
+        content: log.content,
+        plan: log.plan || '',
+        issues: log.issues || '',
+        date: log.date,
+        created_by: currentUser?.email,
+        user_id: currentUserId
       }], { onConflict: 'id' });
     }
     // 保存SOP
     await supabaseClient.from('sops').upsert([{
-      user_id: currentUserId, data: JSON.stringify({ sops }), updated_at: new Date().toISOString()
+      user_id: currentUserId,
+      data: JSON.stringify({ sops }),
+      updated_at: new Date().toISOString()
     }], { onConflict: 'user_id' });
     showSaveStatus();
+    showToast('云端同步完成');
   } catch (err) {
     console.error('云端保存失败:', err);
+    showToast('云端保存失败');
   }
 }
 
@@ -2948,6 +2995,42 @@ function renderSystem() {
   renderUserList();
 }
 
+// 渲染本地用户列表（本地模式使用）
+function renderLocalUserList() {
+  var tbody = document.getElementById('userTableBody');
+  if (!tbody) return;
+
+  var localUsers = JSON.parse(localStorage.getItem('warehouse_local_users') || '[]');
+  var localAdmin = localStorage.getItem('warehouse_local_admin');
+
+  if (localUsers.length === 0 && !localAdmin) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;">暂无本地用户数据</td></tr>';
+    return;
+  }
+
+  var html = '';
+
+  // 显示本地管理员
+  if (localAdmin) {
+    html += '<tr><td>' + escapeHtml(localAdmin) + '</td><td><span class="badge" style="background:#ffebee;color:#c62828;">管理员</span></td><td>本地设置</td><td><span style="color:#999;font-size:12px;">本地管理员</span></td></tr>';
+  }
+
+  // 显示本地用户列表
+  localUsers.forEach(function(user) {
+    var roleBadge = user.role === 'admin'
+      ? '<span class="badge" style="background:#ffebee;color:#c62828;">管理员</span>'
+      : (user.role === 'leader'
+        ? '<span class="badge" style="background:#e3f2fd;color:#1565c0;">领导</span>'
+        : '<span class="badge" style="background:#e8f5e9;color:#2e7d32;">成员</span>');
+
+    var createdAt = user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '-';
+
+    html += '<tr><td>' + escapeHtml(user.email || '-') + '</td><td>' + roleBadge + '</td><td>' + createdAt + '</td><td><span style="color:#999;font-size:12px;">本地用户</span></td></tr>';
+  });
+
+  tbody.innerHTML = html;
+}
+
 // 渲染用户列表（从Supabase获取）
 async function renderUserList() {
   var tbody = document.getElementById('userTableBody');
@@ -2999,7 +3082,7 @@ async function renderUserList() {
       var actions = '';
       if (hasAdminAccess()) {
         if (user.id !== currentUserId) {
-          actions = '<select onchange="changeUserRole(\'' + user.id + '\', this.value)" style="padding:3px 6px;border:1px solid #ddd;border-radius:3px;font-size:12px;">' +
+          actions = '<select onchange="markRoleChanged(\'' + user.id + '\', this.value)" style="padding:3px 6px;border:1px solid #ddd;border-radius:3px;font-size:12px;">' +
             '<option value="member"' + (user.role==='member'?' selected':'') + '>成员</option>' +
             '<option value="leader"' + (user.role==='leader'?' selected':'') + '>领导</option>' +
             '<option value="admin"' + (user.role==='admin'?' selected':'') + '>管理员</option>' +
@@ -3190,7 +3273,7 @@ function updateUIByRole() {
   if (window._isLocalMode && localAdmin) {
     var headerUserInfo = document.getElementById('headerUserInfo');
     var headerEmail = document.getElementById('headerUserEmail');
-    var headerRole = document.getElementById('headerRole');
+    var headerRole = document.getElementById('headerUserRole');
     if (headerUserInfo) {
       headerUserInfo.style.display = 'flex';
       if (headerEmail) headerEmail.textContent = localAdmin;
@@ -3199,6 +3282,14 @@ function updateUIByRole() {
         headerRole.style.background = '#ffebee';
         headerRole.style.color = '#c62828';
       }
+    }
+    var userInfoBar = document.getElementById('userInfoBar');
+    var userEmailDisplay = document.getElementById('userEmailDisplay');
+    var userRoleDisplay = document.getElementById('userRoleDisplay');
+    if (userInfoBar) {
+      userInfoBar.style.display = 'block';
+      if (userEmailDisplay) userEmailDisplay.textContent = localAdmin;
+      if (userRoleDisplay) userRoleDisplay.textContent = '管理员';
     }
   }
 }
@@ -3247,6 +3338,7 @@ function setLocalAdmin() {
   // 立即更新UI，无需刷新
   updateUIByRole();
   showUserInfo();
+  hideAuthOverlay();
 
   statusEl.innerHTML = '<span style="color:var(--success)">✅ 已设置 ' + escapeHtml(email) + ' 为本地管理员</span>';
   showToast('管理员设置成功！添加用户按钮已显示');
@@ -3263,6 +3355,12 @@ function checkLocalAdmin() {
     el.value = localAdmin;
   }
   console.log('checkLocalAdmin:', localAdmin);
+  // 如果设置了本地管理员，自动设置为当前用户
+  if (localAdmin && !currentUser) {
+    currentUser = { email: localAdmin, id: 'local_admin_' + Date.now() };
+    currentUserRole = 'admin';
+    currentUserId = currentUser.id;
+  }
   return localAdmin;
 }
 
@@ -3310,6 +3408,22 @@ getUserRole = async function(userId) {
 };
 
 window.setLocalAdmin = setLocalAdmin;
+window.renderLocalUserList = renderLocalUserList;
+window.renderUserList = renderUserList;
+window.changeUserRole = changeUserRole;
+window.deleteUser = deleteUser;
+window.saveCloudConfig = saveCloudConfig;
+window.testCloudConnection = testCloudConnection;
+window.toggleCard = toggleCard;
+window.markRoleChanged = markRoleChanged;
+window.saveAllRoleChanges = saveAllRoleChanges;
+window.editChecklistGroup = editChecklistGroup;
+window.saveChecklistGroup = saveChecklistGroup;
+window.toggleChecklist = toggleChecklist;
+window.toggleChecklistLabel = toggleChecklistLabel;
+window.addChecklistItem = addChecklistItem;
+window.deleteChecklistItem = deleteChecklistItem;
+window.addChecklistGroup = addChecklistGroup;
 // 折叠/展开卡片
 function toggleCard(header) {
   var cardBody = header.nextElementSibling;
@@ -3481,29 +3595,31 @@ create table if not exists public.user_profiles (
   created_at timestamptz default now()
 );
 
--- 任务表
+-- 任务表（字段名与前端state保持一致）
 CREATE TABLE IF NOT EXISTS public.tasks (
   id BIGINT PRIMARY KEY,
-  task_name TEXT,
-  assignee TEXT,
+  name TEXT,
+  owner TEXT,
   start_date TEXT,
   end_date TEXT,
   duration INTEGER,
   status TEXT DEFAULT 'pending',
   progress INTEGER DEFAULT 0,
   note TEXT,
-  task_phase TEXT,
+  phase TEXT,
   critical INTEGER DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
   user_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 检查清单表
+-- 检查清单表（添加 sort_order 字段）
 CREATE TABLE IF NOT EXISTS public.checklist (
   id TEXT PRIMARY KEY,
   group_name TEXT NOT NULL,
   content TEXT,
   is_checked BOOLEAN DEFAULT false,
+  sort_order INTEGER DEFAULT 0,
   user_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3565,58 +3681,62 @@ CREATE POLICY "sops_all" ON public.sops FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "sops_insert" ON public.sops FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- 导入默认50项Checklist数据
-INSERT INTO public.checklist (id, group_name, content, is_checked) VALUES
-('hw_0', '硬件与设施（10项）', '货架安装完成，承重测试通过', true),
-('hw_1', '硬件与设施（10项）', '叉车/地牛/托盘到位，验收合格', true),
-('hw_2', '硬件与设施（10项）', '电子秤/扫码枪/PDA到位，精度校准', false),
-('hw_3', '硬件与设施（10项）', '打印机（标签/面单/报表）安装调试', false),
-('hw_4', '硬件与设施（10项）', '监控系统全覆盖，存储≥30天', false),
-('hw_5', '硬件与设施（10项）', '照明亮度达标（作业区≥300lux）', false),
-('hw_6', '硬件与设施（10项）', '消防系统（烟感/喷淋/灭火器）验收合格', false),
-('hw_7', '硬件与设施（10项）', '充电区独立排风+防爆设施到位', false),
-('hw_8', '硬件与设施（10项）', '卸货平台高度匹配车型', false),
-('hw_9', '硬件与设施（10项）', '区域标识/斑马线/库位标签张贴完成', false),
-('net_0', '网络与系统（8项）', '网络全覆盖，死角测试通过', false),
-('net_1', '网络与系统（8项）', 'WMS服务器部署完成，压力测试通过', false),
-('net_2', '网络与系统（8项）', 'PDA与WMS联调通过，离线功能验证', false),
-('net_3', '网络与系统（8项）', '打印机与WMS联调通过', false),
-('net_4', '网络与系统（8项）', '客户ERP接口测试通过', false),
-('net_5', '网络与系统（8项）', '数据备份策略确认（日备+异地）', false),
-('net_6', '网络与系统（8项）', '权限矩阵配置完成（角色/客户/数据隔离）', false),
-('net_7', '网络与系统（8项）', '报表模板（日报/月报/客户对账）验证可用', false),
-('proc_0', '流程与文档（10项）', 'SOP手册（9大模块）编写完成并评审', false),
-('proc_1', '流程与文档（10项）', '异常处理流程（缺货/破损/系统故障）培训完成', false),
-('proc_2', '流程与文档（10项）', '客户服务响应时效公示', false),
-('proc_3', '流程与文档（10项）', 'KPI计算公式与客户共识', false),
-('proc_4', '流程与文档（10项）', '报价模板/合同模板法务审核通过', false),
-('proc_5', '流程与文档（10项）', '盘点制度（循环/全盘）启动', false),
-('proc_6', '流程与文档（10项）', '退货处理流程（质检/分类/时效）培训完成', false),
-('proc_7', '流程与文档（10项）', '5S管理标准与检查表发布', false),
-('proc_8', '流程与文档（10项）', '安全操作规程（叉车/登高/用电）上墙', false),
-('proc_9', '流程与文档（10项）', '应急预案（火灾/系统宕机/爆仓）演练完成', false),
-('staff_0', '人员与培训（8项）', '组织架构与岗位职责公示', false),
-('staff_1', '人员与培训（8项）', '关键岗位（主管/系统/客服）到岗', false),
-('staff_2', '人员与培训（8项）', '全员岗前培训完成（安全+系统+流程）', false),
-('staff_3', '人员与培训（8项）', '关键岗位认证通过（叉车证/系统操作）', false),
-('staff_4', '人员与培训（8项）', 'AB角设置完成，交接文档备齐', false),
-('staff_5', '人员与培训（8项）', '排班表与考勤系统上线', false),
-('staff_6', '人员与培训（8项）', '绩效考核方案宣导', false),
-('staff_7', '人员与培训（8项）', '班前会/复盘会机制启动', false),
-('cust_0', '客户与商务（7项）', '首批客户合同/SLA签署完成', false),
-('cust_1', '客户与商务（7项）', '客户系统对接测试通过', false),
-('cust_2', '客户与商务（7项）', '客户月报模板确认', false),
-('cust_3', '客户与商务（7项）', '差异处理时效与赔付标准共识', false),
-('cust_4', '客户与商务（7项）', '客户紧急联系人清单建立', false),
-('cust_5', '客户与商务（7项）', '试运营方案与客户确认', false),
-('cust_6', '客户与商务（7项）', '客户首批订单模拟走单通过', false),
-('comp_0', '合规与资质（7项）', '消防验收合格证取得', false),
-('comp_1', '合规与资质（7项）', '安监/环评验收通过（如适用）', false),
-('comp_2', '合规与资质（7项）', '营业执照经营范围覆盖仓储服务', false),
-('comp_3', '合规与资质（7项）', '道路运输许可证（如涉及配送）', false),
-('comp_4', '合规与资质（7项）', '保险（财产险/责任险）生效', false),
-('comp_5', '合规与资质（7项）', '特种设备（叉车）年检/登记完成', false),
-('comp_6', '合规与资质（7项）', '危险品资质（如涉及）审批通过', false)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.checklist (id, group_name, content, is_checked, sort_order) VALUES
+('hw_0', '硬件与设施（10项）', '货架安装完成，承重测试通过', true, 0),
+('hw_1', '硬件与设施（10项）', '叉车/地牛/托盘到位，验收合格', true, 1),
+('hw_2', '硬件与设施（10项）', '电子秤/扫码枪/PDA到位，精度校准', false, 2),
+('hw_3', '硬件与设施（10项）', '打印机（标签/面单/报表）安装调试', false, 3),
+('hw_4', '硬件与设施（10项）', '监控系统全覆盖，存储≥30天', false, 4),
+('hw_5', '硬件与设施（10项）', '照明亮度达标（作业区≥300lux）', false, 5),
+('hw_6', '硬件与设施（10项）', '消防系统（烟感/喷淋/灭火器）验收合格', false, 6),
+('hw_7', '硬件与设施（10项）', '充电区独立排风+防爆设施到位', false, 7),
+('hw_8', '硬件与设施（10项）', '卸货平台高度匹配车型', false, 8),
+('hw_9', '硬件与设施（10项）', '区域标识/斑马线/库位标签张贴完成', false, 9),
+('net_0', '网络与系统（8项）', '网络全覆盖，死角测试通过', false, 10),
+('net_1', '网络与系统（8项）', 'WMS服务器部署完成，压力测试通过', false, 11),
+('net_2', '网络与系统（8项）', 'PDA与WMS联调通过，离线功能验证', false, 12),
+('net_3', '网络与系统（8项）', '打印机与WMS联调通过', false, 13),
+('net_4', '网络与系统（8项）', '客户ERP接口测试通过', false, 14),
+('net_5', '网络与系统（8项）', '数据备份策略确认（日备+异地）', false, 15),
+('net_6', '网络与系统（8项）', '权限矩阵配置完成（角色/客户/数据隔离）', false, 16),
+('net_7', '网络与系统（8项）', '报表模板（日报/月报/客户对账）验证可用', false, 17),
+('proc_0', '流程与文档（10项）', 'SOP手册（9大模块）编写完成并评审', false, 18),
+('proc_1', '流程与文档（10项）', '异常处理流程（缺货/破损/系统故障）培训完成', false, 19),
+('proc_2', '流程与文档（10项）', '客户服务响应时效公示', false, 20),
+('proc_3', '流程与文档（10项）', 'KPI计算公式与客户共识', false, 21),
+('proc_4', '流程与文档（10项）', '报价模板/合同模板法务审核通过', false, 22),
+('proc_5', '流程与文档（10项）', '盘点制度（循环/全盘）启动', false, 23),
+('proc_6', '流程与文档（10项）', '退货处理流程（质检/分类/时效）培训完成', false, 24),
+('proc_7', '流程与文档（10项）', '5S管理标准与检查表发布', false, 25),
+('proc_8', '流程与文档（10项）', '安全操作规程（叉车/登高/用电）上墙', false, 26),
+('proc_9', '流程与文档（10项）', '应急预案（火灾/系统宕机/爆仓）演练完成', false, 27),
+('staff_0', '人员与培训（8项）', '组织架构与岗位职责公示', false, 28),
+('staff_1', '人员与培训（8项）', '关键岗位（主管/系统/客服）到岗', false, 29),
+('staff_2', '人员与培训（8项）', '全员岗前培训完成（安全+系统+流程）', false, 30),
+('staff_3', '人员与培训（8项）', '关键岗位认证通过（叉车证/系统操作）', false, 31),
+('staff_4', '人员与培训（8项）', 'AB角设置完成，交接文档备齐', false, 32),
+('staff_5', '人员与培训（8项）', '排班表与考勤系统上线', false, 33),
+('staff_6', '人员与培训（8项）', '绩效考核方案宣导', false, 34),
+('staff_7', '人员与培训（8项）', '班前会/复盘会机制启动', false, 35),
+('cust_0', '客户与商务（7项）', '首批客户合同/SLA签署完成', false, 36),
+('cust_1', '客户与商务（7项）', '客户系统对接测试通过', false, 37),
+('cust_2', '客户与商务（7项）', '客户月报模板确认', false, 38),
+('cust_3', '客户与商务（7项）', '差异处理时效与赔付标准共识', false, 39),
+('cust_4', '客户与商务（7项）', '客户紧急联系人清单建立', false, 40),
+('cust_5', '客户与商务（7项）', '试运营方案与客户确认', false, 41),
+('cust_6', '客户与商务（7项）', '客户首批订单模拟走单通过', false, 42),
+('comp_0', '合规与资质（7项）', '消防验收合格证取得', false, 43),
+('comp_1', '合规与资质（7项）', '安监/环评验收通过（如适用）', false, 44),
+('comp_2', '合规与资质（7项）', '营业执照经营范围覆盖仓储服务', false, 45),
+('comp_3', '合规与资质（7项）', '道路运输许可证（如涉及配送）', false, 46),
+('comp_4', '合规与资质（7项）', '保险（财产险/责任险）生效', false, 47),
+('comp_5', '合规与资质（7项）', '特种设备（叉车）年检/登记完成', false, 48),
+('comp_6', '合规与资质（7项）', '危险品资质（如涉及）审批通过', false, 49)
+ON CONFLICT (id) DO UPDATE SET 
+  group_name = EXCLUDED.group_name,
+  content = EXCLUDED.content,
+  is_checked = EXCLUDED.is_checked,
+  sort_order = EXCLUDED.sort_order;
 
 【第二步】部署到公网
 ----------------------------------------
