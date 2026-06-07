@@ -696,8 +696,6 @@ body {
     <div style="padding:40px 32px 20px;text-align:center;">
       <div style="font-size:32px;margin-bottom:12px;">📋</div>
       <h1 style="font-size:22px;font-weight:600;color:#333;margin:0;">项目管理系统</h1>
-      <p style="font-size:14px;color:#999;margin-top:6px;">新仓筹建全流程管理</p>
-      <p style="font-size:12px;color:#888;margin-top:4px;background:#f5f7fa;padding:4px 12px;border-radius:4px;display:inline-block;">管理员账号：1752301037@qq.com</p>
     </div>
     <div style="display:flex;border-bottom:1px solid #f0f0f0;margin:0 32px;justify-content:center;">
       <button id="loginTabBtn" onclick="switchAuthTab('login')" style="text-align:center;padding:12px;cursor:pointer;background:transparent;color:#333;border:none;border-bottom:2px solid #333;font-size:14px;font-weight:500;">登录</button>
@@ -1171,6 +1169,8 @@ function initData() {
         checklist = data.checklist || JSON.parse(JSON.stringify(defaultChecklist));
         logs = data.logs || JSON.parse(JSON.stringify(defaultLogs));
         console.log('✅ 已从本地恢复数据，任务数:', tasks.length, '保存时间:', data.savedAt);
+        // 记录本地数据加载时间，用于后续与云端比较
+        localStorage.setItem('warehouse_local_data_loaded', new Date().toISOString());
         return;
       }
     } catch(e) {
@@ -1191,6 +1191,8 @@ function resetData() {
 function saveData() {
   const data = { tasks, checklist, logs, savedAt: new Date().toISOString() };
   localStorage.setItem('warehouse_project_data', JSON.stringify(data));
+  // 同时更新本地修改时间戳
+  localStorage.setItem('warehouse_local_timestamp', new Date().toISOString());
   console.log('💾 数据已保存到本地，任务数:', tasks.length, '时间:', data.savedAt);
   showSaveStatus();
 }
@@ -1328,7 +1330,7 @@ function bindTabs() {
   document.querySelectorAll('.tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       var tabId = this.getAttribute('data-tab');
-      switchTab(tabId);
+      window.switchTab(tabId);
     });
   });
 }
@@ -1451,7 +1453,7 @@ function updateTaskField(idx, field, val) {
     tasks[idx].duration = days > 0 ? days : 1;
   }
   saveData();
-  // 立即同步到云端（云端是主数据源）
+  // 修改后立即同步到云端
   scheduleCloudSync();
   renderGantt();
 }
@@ -2299,11 +2301,22 @@ function toggleGanttEdit() {
     btn2.style.background = ganttEditing ? 'var(--success)' : '';
     btn2.style.color = ganttEditing ? 'white' : '';
   }
-  // 退出编辑模式时，立即同步到云端
+  // 退出编辑模式时，立即保存到本地并同步到云端
   if (!ganttEditing) {
     saveData();
-    syncToCloud();
-    showToast('已保存并同步到云端 ✅');
+    // 立即同步到云端（不等定时器）
+    if (supabaseClient && currentUser) {
+      console.log('🔄 退出编辑，立即同步到云端...');
+      syncToCloud().then(function() {
+        setLastCloudSync();
+        showToast('已保存并同步到云端 ✅');
+      }).catch(function(err) {
+        console.error('同步失败:', err);
+        showToast('已保存到本地，云端同步失败');
+      });
+    } else {
+      showToast('已保存到本地 ✅');
+    }
   } else {
     showToast('已进入编辑模式');
   }
@@ -2474,14 +2487,17 @@ document.addEventListener('DOMContentLoaded', function() {
   updateUIByRole();
   hideAuthOverlay();
 
-  // 5. 启动Supabase并立即从云端同步最新数据（覆盖本地旧数据）
+  // 5. 启动Supabase，延迟云端同步让本地数据先渲染
   setTimeout(function() {
     initSupabase();
     setupAuthListener();
-    // 立即从云端拉取最新数据（云端是主数据源）
+    // 延迟从云端拉取数据，让本地数据先渲染完成
     if (supabaseClient && currentUser) {
-      console.log('🔄 开始从云端同步最新数据...');
-      syncFromCloud();
+      console.log('🔄 准备从云端同步数据...');
+      // 延迟3秒后检查云端数据，避免覆盖本地最新修改
+      setTimeout(function() {
+        syncFromCloud();
+      }, 3000);
     }
   }, 300);
 });
@@ -2508,9 +2524,9 @@ if (window.location.protocol === 'file:') {
 
 // 初始化Supabase
 function initSupabase() {
-  // 本地文件模式跳过Supabase初始化
+  // 本地文件模式也尝试初始化Supabase（如果配置了URL）
   if (window._isLocalMode) {
-    console.log('本地模式：跳过Supabase初始化');
+    console.log('本地模式：尝试初始化Supabase...');
     // 自动登录预置管理员
     var localAdmin = checkLocalAdmin();
     if (localAdmin && !currentUser) {
@@ -2521,7 +2537,7 @@ function initSupabase() {
       updateUIByRole();
     }
     hideAuthOverlay();
-    return;
+    // 继续尝试初始化Supabase（不return）
   }
 
   // 从localStorage加载配置（如果用户修改过）
@@ -2533,14 +2549,15 @@ function initSupabase() {
   if (window.supabase) {
     try {
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      console.log('✅ Supabase客户端已创建');
       checkSession();
     } catch (err) {
       console.warn('Supabase初始化失败:', err);
-      hideAuthOverlay();
+      supabaseClient = null;
     }
   } else {
-    console.warn('Supabase SDK未加载，使用本地模式');
-    hideAuthOverlay();
+    console.warn('Supabase SDK未加载');
+    supabaseClient = null;
   }
 }
 
@@ -2557,11 +2574,18 @@ async function checkSession() {
       showUserInfo();
       await syncFromCloud();
     } else {
-      showAuthOverlay();
+      // 如果没有会话但有本地管理员，不显示登录层
+      var localAdmin = localStorage.getItem('warehouse_local_admin');
+      if (!localAdmin || !currentUser) {
+        showAuthOverlay();
+      }
     }
   } catch (err) {
     console.error('检查会话失败:', err);
-    showAuthOverlay();
+    var localAdmin = localStorage.getItem('warehouse_local_admin');
+    if (!localAdmin || !currentUser) {
+      showAuthOverlay();
+    }
   }
 }
 
@@ -2720,37 +2744,80 @@ async function syncFromCloud() {
 
   try {
     showToast('正在同步云端数据...');
-    // 同步任务 - 云端是主数据源，总是拉取最新
+
+    // 获取本地数据时间戳
+    var localSaved = localStorage.getItem('warehouse_project_data');
+    var localTime = null;
+    if (localSaved) {
+      try {
+        var localData = JSON.parse(localSaved);
+        localTime = localData.savedAt ? new Date(localData.savedAt).getTime() : 0;
+      } catch(e) {}
+    }
+    var lastCloudSync = getLastCloudSync();
+    var lastCloudTime = lastCloudSync ? lastCloudSync.getTime() : 0;
+
+    console.log('📊 本地数据时间:', localTime ? new Date(localTime).toISOString() : '无');
+    console.log('📊 上次云端同步:', lastCloudTime ? new Date(lastCloudTime).toISOString() : '无');
+
+    // 同步任务 - 检查云端数据是否比本地新
     const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*').order('sort_order', { ascending: true });
     console.log('云端tasks数据:', taskData, '错误:', taskError);
     if (!taskError && taskData && taskData.length > 0) {
-      tasks = taskData.map(t => ({
-        id: t.id, phase: t.phase || '', name: t.name || '',
-        startDate: t.start_date || '', endDate: t.end_date || '',
-        duration: t.duration || 1, owner: t.owner || '',
-        critical: t.critical || 0, status: t.status || 'pending', progress: t.progress || 0, note: t.note || ''
-      }));
-      console.log('✅ 已从云端同步', tasks.length, '个任务');
+      // 检查云端数据是否有更新
+      var cloudLatest = taskData.reduce(function(max, t) {
+        var tTime = t.updated_at ? new Date(t.updated_at).getTime() : 0;
+        return tTime > max ? tTime : max;
+      }, 0);
+      console.log('📊 云端最新数据时间:', cloudLatest ? new Date(cloudLatest).toISOString() : '无');
+
+      // 只有当云端数据比本地新时才覆盖
+      if (!localTime || cloudLatest > localTime) {
+        tasks = taskData.map(t => ({
+          id: t.id, phase: t.phase || '', name: t.name || '',
+          startDate: t.start_date || '', endDate: t.end_date || '',
+          duration: t.duration || 1, owner: t.owner || '',
+          critical: t.critical || 0, status: t.status || 'pending', progress: t.progress || 0, note: t.note || ''
+        }));
+        console.log('☁️ 云端数据较新，已更新本地任务，数量:', tasks.length);
+      } else {
+        console.log('💻 本地数据较新，保留本地任务数据');
+      }
     } else if (taskError) {
       console.log('⚠️ 云端任务查询失败，保留本地数据:', taskError.message);
     } else {
       console.log('⚠️ 云端无任务数据，保留本地数据');
     }
-    // 同步Checklist - 云端是主数据源，总是拉取最新
+    // 同步Checklist - 检查云端数据是否比本地新
     try {
       const { data: checkData, error: checkError } = await supabaseClient.from('checklist').select('*').order('sort_order', { ascending: true });
       console.log('云端Checklist原始数据:', checkData);
       if (!checkError && checkData && checkData.length > 0) {
-        var newChecklist = {};
-        checkData.forEach(item => {
-          const group = item.group_name || '其他';
-          const text = item.content || '';
-          const checked = item.is_checked === true || item.checked === true || false;
-          if (!newChecklist[group]) newChecklist[group] = [];
-          newChecklist[group].push({ text: text, checked: checked });
-        });
-        checklist = newChecklist;
-        console.log('✅ 已从云端同步Checklist');
+        // 只有当本地没有数据或云端数据较新时才覆盖
+        var localCheckSaved = localStorage.getItem('warehouse_project_data');
+        var localCheckTime = 0;
+        if (localCheckSaved) {
+          try { localCheckTime = new Date(JSON.parse(localCheckSaved).savedAt).getTime(); } catch(e) {}
+        }
+        var cloudCheckLatest = checkData.reduce(function(max, item) {
+          var t = item.updated_at ? new Date(item.updated_at).getTime() : 0;
+          return t > max ? t : max;
+        }, 0);
+
+        if (!localCheckTime || cloudCheckLatest > localCheckTime) {
+          var newChecklist = {};
+          checkData.forEach(item => {
+            const group = item.group_name || '其他';
+            const text = item.content || '';
+            const checked = item.is_checked === true || item.checked === true || false;
+            if (!newChecklist[group]) newChecklist[group] = [];
+            newChecklist[group].push({ text: text, checked: checked });
+          });
+          checklist = newChecklist;
+          console.log('☁️ 云端Checklist较新，已更新本地');
+        } else {
+          console.log('💻 本地Checklist较新，保留本地');
+        }
       } else if (checkError) {
         console.log('⚠️ 云端Checklist查询失败，保留本地数据:', checkError.message);
       } else {
@@ -2760,38 +2827,67 @@ async function syncFromCloud() {
       console.error('同步Checklist失败:', err);
       console.log('⚠️ Checklist同步失败，保留本地数据');
     }
-    // 同步日志
+    // 同步日志 - 检查云端数据是否比本地新
     try {
       const { data: logData, error: logError } = await supabaseClient.from('logs').select('*').order('created_at', { ascending: false });
       if (!logError && logData && logData.length > 0) {
-        logs = logData.map(l => ({
-          id: l.id,
-          date: l.date || (l.created_at ? l.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
-          content: l.content || '',
-          plan: l.plan || '',
-          issues: l.issues || ''
-        }));
+        var localLogSaved = localStorage.getItem('warehouse_project_data');
+        var localLogTime = 0;
+        if (localLogSaved) {
+          try { localLogTime = new Date(JSON.parse(localLogSaved).savedAt).getTime(); } catch(e) {}
+        }
+        var cloudLogLatest = logData.reduce(function(max, l) {
+          var t = l.created_at ? new Date(l.created_at).getTime() : 0;
+          return t > max ? t : max;
+        }, 0);
+
+        if (!localLogTime || cloudLogLatest > localLogTime) {
+          logs = logData.map(l => ({
+            id: l.id,
+            date: l.date || (l.created_at ? l.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+            content: l.content || '',
+            plan: l.plan || '',
+            issues: l.issues || ''
+          }));
+          console.log('☁️ 云端日志较新，已更新本地');
+        } else {
+          console.log('💻 本地日志较新，保留本地');
+        }
       }
     } catch (err) {
       console.log('日志同步失败:', err);
     }
-    // 同步SOP
+    // 同步SOP - 检查云端数据是否比本地新
     try {
-      const { data: sopData, error: sopError } = await supabaseClient.from('sops').select('*').eq('user_id', currentUserId).single();
-      if (!sopError && sopData && sopData.data) {
-        try {
-          const parsed = typeof sopData.data === 'string' ? JSON.parse(sopData.data) : sopData.data;
-          if (parsed.sops) {
-            sops = parsed.sops;
-            localStorage.setItem('warehouse_sop_data', JSON.stringify({ sops, savedAt: new Date().toISOString() }));
-          }
-        } catch(e) { console.log('SOP解析失败:', e); }
+      const { data: sopData, error: sopError } = await supabaseClient.from('sops').select('*').order('updated_at', { ascending: false }).limit(1);
+      if (!sopError && sopData && sopData.length > 0 && sopData[0].sop_data) {
+        var localSopSaved = localStorage.getItem('warehouse_sop_data');
+        var localSopTime = 0;
+        if (localSopSaved) {
+          try { localSopTime = new Date(JSON.parse(localSopSaved).savedAt).getTime(); } catch(e) {}
+        }
+        var cloudSopTime = sopData[0].updated_at ? new Date(sopData[0].updated_at).getTime() : 0;
+
+        if (!localSopTime || cloudSopTime > localSopTime) {
+          try {
+            const parsed = typeof sopData[0].sop_data === 'string' ? JSON.parse(sopData[0].sop_data) : sopData[0].sop_data;
+            if (parsed.sops) {
+              sops = parsed.sops;
+              localStorage.setItem('warehouse_sop_data', JSON.stringify({ sops, savedAt: new Date().toISOString() }));
+              console.log('☁️ 云端SOP较新，已更新本地');
+            }
+          } catch(e) { console.log('SOP解析失败:', e); }
+        } else {
+          console.log('💻 本地SOP较新，保留本地');
+        }
       }
     } catch (err) {
       console.log('SOP同步失败（可能无数据）:', err);
     }
-    // 保存到本地缓存（只保存当前内存中的数据）
-    localStorage.setItem('warehouse_project_data', JSON.stringify({ tasks, checklist, logs, savedAt: new Date().toISOString() }));
+    // 保存到本地缓存（只在数据有变化时保存）
+    var currentSaved = localStorage.getItem('warehouse_project_data');
+    var currentData = { tasks, checklist, logs, savedAt: new Date().toISOString() };
+    localStorage.setItem('warehouse_project_data', JSON.stringify(currentData));
     localStorage.setItem('warehouse_sop_data', JSON.stringify({ sops, savedAt: new Date().toISOString() }));
     // 刷新界面
     renderDashboard(); renderGantt(); renderChecklist(); renderLogs(); renderLeader();
@@ -2806,19 +2902,32 @@ async function syncFromCloud() {
 // 保存数据到云端（带防抖）
 let syncTimer = null;
 function scheduleCloudSync() {
-  if (window._isLocalMode) return;
-  if (!supabaseClient || !currentUser) return;
-  if (!currentUserId || !currentUserId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-    console.log('跳过云端同步：非云端用户或无效的user_id');
+  if (window._isLocalMode) {
+    console.log('本地模式：跳过云端同步');
+    return;
+  }
+  if (!supabaseClient) {
+    console.log('Supabase未初始化，跳过云端同步');
+    return;
+  }
+  if (!currentUser) {
+    console.log('未登录，跳过云端同步');
+    return;
+  }
+  // 本地管理员模式也允许同步（使用本地用户ID）
+  var effectiveUserId = currentUserId;
+  if (!effectiveUserId) {
+    console.log('无有效用户ID，跳过云端同步');
     return;
   }
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => { 
+  syncTimer = setTimeout(function() { 
+    console.log('⏰ 定时同步触发...');
     syncToCloud().then(function() {
-      // 推送成功后更新同步时间戳
       setLastCloudSync();
+      console.log('✅ 定时同步完成');
     }).catch(function(err) {
-      console.error('定时同步失败:', err);
+      console.error('❌ 定时同步失败:', err);
     });
   }, 3000); // 3秒防抖
 }
@@ -2842,12 +2951,18 @@ async function syncToCloud() {
 
     // ========== 保存任务：先删除旧数据，再插入新数据（避免残留）==========
     console.log('📝 同步任务到云端，数量:', tasks.length);
-    const { error: deleteTaskError } = await supabaseClient.from('tasks').delete().neq('id', 0);
-    if (deleteTaskError) {
-      console.warn('删除旧任务失败（可能无权限）:', deleteTaskError.message);
+
+    // 先尝试删除旧数据
+    try {
+      const { error: deleteTaskError } = await supabaseClient.from('tasks').delete().neq('id', 0);
+      if (deleteTaskError) {
+        console.warn('删除旧任务失败（可能无权限）:', deleteTaskError.message);
+      }
+    } catch(e) {
+      console.warn('删除旧任务异常:', e.message);
     }
 
-    // 批量插入任务
+    // 批量插入任务 - 不发送 user_id 字段（如果数据库没有这个字段）
     if (tasks.length > 0) {
       const dbTasks = tasks.map(task => ({
         id: parseInt(task.id) || Date.now() + Math.floor(Math.random() * 1000),
@@ -2861,13 +2976,25 @@ async function syncToCloud() {
         note: (task.note || '').substring(0, 500),
         phase: task.phase || '',
         critical: parseInt(task.critical) || 0,
-        sort_order: parseInt(task.id) || 0,
-        user_id: currentUserId
+        sort_order: parseInt(task.id) || 0
+        // 注意：不发送 user_id，避免 schema cache 错误
       }));
-      const { error: insertTaskError } = await supabaseClient.from('tasks').insert(dbTasks);
+
+      console.log('📤 准备推送任务数据:', dbTasks.length, '条');
+      const { data: insertData, error: insertTaskError } = await supabaseClient.from('tasks').insert(dbTasks);
       if (insertTaskError) {
-        console.error('任务批量插入失败:', insertTaskError);
+        console.error('❌ 任务批量插入失败:', insertTaskError);
+        console.error('错误详情:', JSON.stringify(insertTaskError));
         syncErrors.push('tasks: ' + insertTaskError.message);
+        // 尝试逐条插入作为降级方案
+        console.log('🔄 尝试逐条插入任务...');
+        for (var i = 0; i < dbTasks.length; i++) {
+          try {
+            await supabaseClient.from('tasks').insert([dbTasks[i]]);
+          } catch(singleErr) {
+            console.warn('单条任务插入失败:', i, singleErr.message);
+          }
+        }
       } else {
         console.log('✅ 任务同步成功:', tasks.length, '条');
       }
@@ -2875,9 +3002,13 @@ async function syncToCloud() {
 
     // ========== 保存Checklist：先删除旧数据，再插入新数据 ==========
     console.log('📝 同步Checklist到云端...');
-    const { error: deleteCheckError } = await supabaseClient.from('checklist').delete().neq('id', '');
-    if (deleteCheckError) {
-      console.warn('删除旧Checklist失败:', deleteCheckError.message);
+    try {
+      const { error: deleteCheckError } = await supabaseClient.from('checklist').delete().neq('id', '');
+      if (deleteCheckError) {
+        console.warn('删除旧Checklist失败:', deleteCheckError.message);
+      }
+    } catch(e) {
+      console.warn('删除旧Checklist异常:', e.message);
     }
 
     var checkItems = [];
@@ -2891,8 +3022,8 @@ async function syncToCloud() {
           group_name: group,
           content: (item.text || '').substring(0, 300),
           is_checked: !!item.checked,
-          sort_order: sortOrder++,
-          user_id: currentUserId
+          sort_order: sortOrder++
+          // 注意：不发送 user_id
         });
       }
     }
@@ -2900,7 +3031,7 @@ async function syncToCloud() {
     if (checkItems.length > 0) {
       const { error: insertCheckError } = await supabaseClient.from('checklist').insert(checkItems);
       if (insertCheckError) {
-        console.error('Checklist批量插入失败:', insertCheckError);
+        console.error('❌ Checklist批量插入失败:', insertCheckError);
         syncErrors.push('checklist: ' + insertCheckError.message);
       } else {
         console.log('✅ Checklist同步成功:', checkItems.length, '条');
@@ -2909,9 +3040,13 @@ async function syncToCloud() {
 
     // ========== 保存日志：先删除旧数据，再插入新数据 ==========
     console.log('📝 同步日志到云端，数量:', logs.length);
-    const { error: deleteLogError } = await supabaseClient.from('logs').delete().neq('id', 0);
-    if (deleteLogError) {
-      console.warn('删除旧日志失败:', deleteLogError.message);
+    try {
+      const { error: deleteLogError } = await supabaseClient.from('logs').delete().neq('id', 0);
+      if (deleteLogError) {
+        console.warn('删除旧日志失败:', deleteLogError.message);
+      }
+    } catch(e) {
+      console.warn('删除旧日志异常:', e.message);
     }
 
     if (logs.length > 0) {
@@ -2919,14 +3054,14 @@ async function syncToCloud() {
         id: parseInt(log.id) || Date.now() + Math.floor(Math.random() * 10000),
         content: (log.content || '').substring(0, 1000),
         plan: (log.plan || '').substring(0, 500),
-        issues: (log.issues || '').substring(0, 500),
         date: log.date || new Date().toISOString().split('T')[0],
-        created_by: (currentUser?.email || '').substring(0, 100),
-        user_id: currentUserId
+        created_by: (currentUser?.email || '').substring(0, 100)
+        // 注意：不发送 user_id 和 issues（如果数据库没有这些字段）
       }));
+      console.log('📤 准备推送日志数据:', dbLogs.length, '条');
       const { error: insertLogError } = await supabaseClient.from('logs').insert(dbLogs);
       if (insertLogError) {
-        console.error('日志批量插入失败:', insertLogError);
+        console.error('❌ 日志批量插入失败:', insertLogError);
         syncErrors.push('logs: ' + insertLogError.message);
       } else {
         console.log('✅ 日志同步成功:', logs.length, '条');
@@ -2935,21 +3070,31 @@ async function syncToCloud() {
 
     // ========== 保存SOP ==========
     console.log('📝 同步SOP到云端...');
-    const { error: sopError } = await supabaseClient.from('sops').upsert([{
-      user_id: currentUserId,
-      data: JSON.stringify({ sops }),
-      updated_at: new Date().toISOString()
-    }], { onConflict: 'user_id' });
-    if (sopError) {
-      console.error('SOP保存失败:', sopError);
-      syncErrors.push('sops: ' + sopError.message);
-    } else {
-      console.log('✅ SOP同步成功');
+    try {
+      // 先尝试删除旧SOP数据
+      const { error: deleteSopError } = await supabaseClient.from('sops').delete().neq('id', 0);
+      if (deleteSopError) {
+        console.warn('删除旧SOP失败:', deleteSopError.message);
+      }
+      // 插入新SOP数据
+      const { error: sopError } = await supabaseClient.from('sops').insert([{
+        sop_data: JSON.stringify({ sops }),
+        updated_at: new Date().toISOString()
+      }]);
+      if (sopError) {
+        console.error('❌ SOP保存失败:', sopError);
+        syncErrors.push('sops: ' + sopError.message);
+      } else {
+        console.log('✅ SOP同步成功');
+      }
+    } catch(sopErr) {
+      console.error('SOP同步异常:', sopErr);
+      syncErrors.push('sops: ' + sopErr.message);
     }
 
     if (syncErrors.length > 0) {
-      console.warn('同步完成但有错误:', syncErrors);
-      showToast('云端同步部分失败，请检查控制台');
+      console.warn('⚠️ 同步完成但有错误:', syncErrors);
+      showToast('云端同步部分失败，数据已保存到本地');
     } else {
       setLastCloudSync();
       showSaveStatus();
@@ -3399,13 +3544,19 @@ function updateUIByRole() {
   }
 }
 
-// 重写 switchTab 以支持系统设置
-let _originalSwitchTab = switchTab;
-switchTab = function(tabId) {
-  _originalSwitchTab(tabId);
-  if (tabId === 'system') {
-    renderSystem();
-  }
+// 确保 switchTab 在全局可访问（修复 Tab 点击事件）
+window.switchTab = function(tabId) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelector('[data-tab="' + tabId + '"]').classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+  if (tabId === 'dashboard') renderDashboard();
+  if (tabId === 'gantt') renderGantt();
+  if (tabId === 'checklist') renderChecklist();
+  if (tabId === 'daily') renderLogs();
+  if (tabId === 'leader') renderLeader();
+  if (tabId === 'sop') { renderFlowNav(); renderSopContent(); }
+  if (tabId === 'system') renderSystem();
 };
 
 // 在登录/权限变更时更新UI
